@@ -34,6 +34,14 @@ That is why `narrow` is not the control. The arm the headline rests on is `zeros
 network, byte for byte, with the arrows concatenating zeros. Its parameter count is identical
 to `full` by construction, and `selfcheck` asserts it rather than trusting it.
 
+One precision I got wrong in the first draft and fixed on review: this makes `zeros`
+**parameter-matched**, not **capacity-matched**. Feeding a decoder's skip-side channels
+constant zero leaves the weights that read them dead, so `zeros` carries `full`'s parameter
+count and something close to `narrow`'s effective capacity. What `zeros` licenses is the
+narrow claim — "not merely the 237,216 missing parameters" — and not the broad one,
+"information rather than capacity". Those two are the same severed pathway described twice,
+and nothing in this grid separates them.
+
 **Takeaway:** before ablating a component, print the parameter count of the ablated model. If
 it moved, you changed capacity too, and the honest fix is a shape-matched control arm rather
 than a paragraph explaining why the capacity difference probably doesn't matter. (This is

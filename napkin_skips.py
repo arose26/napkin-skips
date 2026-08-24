@@ -20,9 +20,13 @@ napkin-gamemaster learned the hard way with its `no-motion` control):
   detach   cat([up(u), h_k.detach()])   same information, no gradient shortcut
   narrow   no cat at all                the plain encoder-decoder CNN; fewer params
 
-`zeros` is the arm that makes the headline claim falsifiable: it is byte-for-byte
-the same network as `full` with the arrows carrying nothing, so any gap between
-them is the *information* in the skips and cannot be capacity.
+`zeros` is the arm that makes the headline claim falsifiable: it has `full`'s exact
+parameter count, shapes and FLOPs, so a gap between them cannot be blamed on the
+237,216 parameters `narrow` loses. Note what it does NOT prove: a zeroed arrow
+feeds constant zero to the decoder's skip-side channels, so those weights are
+dead and `zeros` has `full`'s parameter count with roughly `narrow`'s effective
+capacity. "Information" and "usable capacity" are two descriptions of the same
+severed pathway and this grid does not separate them.
 
 The registered hypothesis is in the README, written before the grid ran.
 

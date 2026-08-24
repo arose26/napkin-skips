@@ -18,21 +18,31 @@ a different and much sicker network than anything in this grid.
 
 ## The five arms
 
-Only `narrow` changes the parameter count. The rest are shape- and param-matched, so a gap
-between them is *information* and cannot be capacity — the control-arm discipline
-[napkin-gamemaster](https://github.com/arose26/napkin-gamemaster) learned the hard way when
-its `no-stack` arm turned out to change two variables at once.
+Only `narrow` changes the parameter count. The rest are shape- and param-matched — the
+control-arm discipline [napkin-gamemaster](https://github.com/arose26/napkin-gamemaster)
+learned the hard way when its `no-stack` arm turned out to change two variables at once.
 
 | arm | the arrow becomes | params | isolates |
 |---|---|---|---|
 | `full` | `cat([up(u), h_k])` | 2.813M | the textbook UNet — control |
-| `zeros` | `cat([up(u), 0*h_k])` | 2.813M | **information**: same net, arrows carry nothing |
+| `zeros` | `cat([up(u), 0*h_k])` | 2.813M | the arrows, with `narrow`'s parameter loss controlled |
 | `lo-only` | `h3` live, `h1`/`h2` zeroed | 2.813M | is it only the low-res arrow that matters? |
 | `detach` | `cat([up(u), h_k.detach()])` | 2.813M | **gradient path** vs feature path |
 | `narrow` | no `cat` at all | 2.576M | the plain encoder–decoder CNN |
 
-`zeros` is the arm the headline claim rests on. It is byte-for-byte the same network as
-`full` with the arrows zeroed, so it cannot be dismissed as a capacity difference.
+`zeros` is the arm the headline claim rests on, and it is worth being precise about what it
+does and does not control. It has `full`'s exact parameter count, tensor shapes and FLOPs, so
+it rules out the specific confound `narrow` introduces: *"the skip-free model is worse merely
+because it lost 237,216 parameters and three residual projections."*
+
+It does **not** establish an "information, not capacity" dichotomy, and an earlier draft of
+this README claimed that it did. A zeroed arrow feeds constant zero to the decoder's skip-side
+input channels, so the weights reading them are dead — `zeros` has `full`'s parameter count and
+something close to `narrow`'s *effective* capacity. That is a feature of the design, not a
+flaw: `zeros` and `narrow` should behave alike, and if they do, the parameter deficit was not
+what mattered. But this grid cannot separate "the arrows carry information the decoder needs"
+from "the arrows give the decoder usable capacity" — those are two descriptions of the same
+severed pathway, and no arm here pulls them apart.
 
 `narrow` is deliberately *not* the control, because halving a decoder block's input width
 from 2c to c removes three things, not one — and the third is easy to miss. `ResBlock`
