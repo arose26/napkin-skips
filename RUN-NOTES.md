@@ -25,15 +25,28 @@ The second lane was only ever a speed optimisation. Dropping it costs time and n
 and it removes the hardware variable from the grid entirely, which is strictly better for the
 comparison than balancing it was.
 
+**The Colab lane is dropped entirely.** It was reaped a third time within minutes of being
+repointed, and — more decisively — there is no job left that it can correctly do.
+
+The long `narrow` probe looked disposable, but it is not hardware-free: its whole purpose is
+to be compared against `full`'s plateau, which is a **cross-arm** comparison. Running it on a
+T4 while every `full` run is on the 4050 would reintroduce exactly the arm↔hardware confound
+that sharding by seed was designed to avoid. A measurement that is only meaningful next to
+another arm has to run on the same machine as that arm.
+
+So everything runs local, in one queue:
+
 | lane | hardware | job |
 |---|---|---|
-| local | RTX 4050 Laptop, 6 GB, torch 2.4.1+cu121, numpy 1.26.4 | **all 25 grid runs** |
-| Colab | Tesla T4, torch 2.11.0+cu128, numpy 2.1.3 | the long `narrow` run only — **never the grid** |
+| local | RTX 4050 Laptop, 6 GB, torch 2.4.1+cu121, numpy 1.26.4 | **all 25 grid runs, then the long `narrow` probe** |
+| Colab | — | **nothing.** Not viable, and no job is hardware-free enough to give it |
 
-Colab's job is deliberately the one experiment that is disposable: the 120-epoch `narrow`
-probe below. If the VM is reaped, nothing in the published grid is affected, and the run is
-simply relaunched. No Colab output enters the grid, so the grid never spans two GPUs and its
-hardware composition is not decided by a race.
+Idle capacity is not a reason to run something on it. Correctness beats utilisation.
+
+One practical note for any future relaunch on a stale clone: `git pull` aborts with *"Your
+local changes to driver.log would be overwritten by merge"*, because `driver.log` was tracked
+before INSIGHTS #7 and the clone predates its removal. `git fetch && git reset --hard
+origin/main` is the fix; a fresh clone does not have the problem.
 
 Measured local rate: 14,040 steps in ~1,290 s = **21.5 min/run** including 7 FMD probes.
 Seeds 0–2 (15 runs) ETA ~14:25; seeds 3–4 (10 runs, launched after) ETA ~18:00.
