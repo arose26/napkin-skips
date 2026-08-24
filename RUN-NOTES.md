@@ -3,30 +3,52 @@
 Watchers do not survive a context refresh or a machine restart, so the arming commands live
 here rather than being reconstructed.
 
-## Two lanes, sharded by seed
+## Lane allocation (revised 2026-08-24 after two second-lane failures)
 
-The grid is 5 arms × 5 seeds = 25 runs at ~16 min each, which is ~7 h in one lane. It runs
-in two lanes at once instead.
+**The published grid runs entirely on the local RTX 4050.** All 25 runs, one machine.
 
-| lane | hardware | seeds | runs |
-|---|---|---|---|
-| local | RTX 4050 Laptop, 6 GB, torch 2.4.1+cu121, numpy 1.26.4 | 0, 1, 2 | 15 |
-| Colab | Tesla T4, 15360 MiB, torch 2.11.0+cu128, numpy 2.1.3 | 3, 4 | 10 |
+The original plan sharded the grid across a second lane to halve wall-clock. That plan is
+abandoned, and the reasons are worth keeping:
 
-**The shard key is the seed, never the arm.** Every arm therefore runs on both machines, so
-the hardware difference is balanced across the comparison rather than confounded with it.
-Sharding by arm would have put `full` on one GPU and `narrow` on another and made the
-headline number uninterpretable.
+- **Colab free tier reaped the VM twice inside an hour**, the second time losing a partial
+  run outright (checkpoints are only written at the end, so ~1 h of T4 time produced nothing).
+  It does real work while alive — 2000 steps in 214 s at 99% GPU — but disconnects whenever
+  the browser is idle, and its limits are duration-based as well as inactivity-based.
+- **A rented RTX 4090 (RunPod, $0.34/h community) could not use its GPU.** `nvidia-smi` saw
+  the card; `torch.cuda.is_available()` returned `False` with "CUDA unknown error", and a pod
+  restart did not clear it. Terminated after ~10 min, ~$0.06 spent.
+- **The second lane introduced a correctness bug**, not just unreliability: `.done.*`
+  sentinels were git-tracked, so the local lane's passing selfcheck synced to Colab and
+  switched Colab's own selfcheck off. See INSIGHTS #7.
 
-The two lanes are *not* interchangeable per-step: Colab measured slower than this laptop on
-napkin-dit (11 vs 14.7 st/s). Never compare wall-clock across lanes as if they were one
-machine.
+The second lane was only ever a speed optimisation. Dropping it costs time and nothing else —
+and it removes the hardware variable from the grid entirely, which is strictly better for the
+comparison than balancing it was.
+
+| lane | hardware | job |
+|---|---|---|
+| local | RTX 4050 Laptop, 6 GB, torch 2.4.1+cu121, numpy 1.26.4 | **all 25 grid runs** |
+| Colab | Tesla T4, torch 2.11.0+cu128, numpy 2.1.3 | the long `narrow` run only — **never the grid** |
+
+Colab's job is deliberately the one experiment that is disposable: the 120-epoch `narrow`
+probe below. If the VM is reaped, nothing in the published grid is affected, and the run is
+simply relaunched. No Colab output enters the grid, so the grid never spans two GPUs and its
+hardware composition is not decided by a race.
+
+Measured local rate: 14,040 steps in ~1,290 s = **21.5 min/run** including 7 FMD probes.
+Seeds 0–2 (15 runs) ETA ~14:25; seeds 3–4 (10 runs, launched after) ETA ~18:00.
 
 ## Local lane
 
 ```bash
 cd /home/bob/napkin-skips
 SEEDS="0 1 2" EPOCHS=30 setsid nohup ./run_shard.sh > driver.log 2>&1 &
+```
+
+then, when that shard's `.done.shard` lands:
+
+```bash
+SEEDS="3 4" EPOCHS=30 setsid nohup ./run_shard.sh > driver2.log 2>&1 &
 ```
 
 ## Colab lane
@@ -100,8 +122,8 @@ The probe left one thing unresolved and the README says so: `narrow` is still fa
 catch up", so the repo claims a **convergence penalty** and explicitly declines to claim a
 **quality ceiling**.
 
-To bound it, one long single-seed run of `narrow`, to be launched on whichever lane frees up
-first (expected: Colab, after seeds 3–4 finish):
+To bound it, one long single-seed run of `narrow`. **This is the Colab lane's only job** —
+it is outside the grid, so losing it to a reaped VM costs nothing but a relaunch:
 
 ```bash
 cd /content/napkin-skips && git pull -q
