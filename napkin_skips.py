@@ -417,6 +417,7 @@ def bootstrap_ci(xs, reps=10000, alpha=0.05, seed=0):
 
 CKPT = OUT / "ckpt"
 RES = OUT / "res"
+ASSETS = pathlib.Path(__file__).parent / "assets"
 
 
 def n_params(arm):
@@ -574,6 +575,20 @@ def cmd_report(a):
     (OUT / "report.json").write_text(json.dumps(out, indent=2))
     print("wrote", OUT / "report.json")
     plot(out, a.arms)
+
+    # House convention: out/ is gitignored, assets/ is committed and holds the exact
+    # JSON behind every published table -- including the per-run files, so a reader
+    # can recompute the IQM and the CI rather than taking the summary on trust.
+    ASSETS.mkdir(exist_ok=True)
+    (ASSETS / "report.json").write_text(json.dumps(out, indent=2))
+    (ASSETS / "res").mkdir(exist_ok=True)
+    n = 0
+    for f in sorted(RES.glob("*.json")):
+        (ASSETS / "res" / f.name).write_text(f.read_text()); n += 1
+    for art in ("skips.png", "skips.gif", "skips_final.png"):
+        if (OUT / art).exists():
+            (ASSETS / art).write_bytes((OUT / art).read_bytes())
+    print(f"published assets/report.json + assets/res/ ({n} runs)")
 
 
 def plot(out, arms):
