@@ -92,3 +92,27 @@ The local lane needs no `.deps` directory: this interpreter (python 3.11.10) alr
 torch 2.4.1 with numpy 1.26.4. An earlier `.deps` symlink borrowed from napkin-diffusion
 broke the import outright — that tree's numpy was built for a different interpreter, and
 `PYTHONPATH=.deps` shadowed the working one with a source tree that refuses to import.
+
+## Queued: the long `narrow` run (bounds the open question)
+
+The probe left one thing unresolved and the README says so: `narrow` is still falling at
+21,060 steps, and a descending curve can asymptote anywhere. "Has not saturated" is not "will
+catch up", so the repo claims a **convergence penalty** and explicitly declines to claim a
+**quality ceiling**.
+
+To bound it, one long single-seed run of `narrow`, to be launched on whichever lane frees up
+first (expected: Colab, after seeds 3–4 finish):
+
+```bash
+cd /content/napkin-skips && git pull -q
+python3 napkin_skips.py train --arm narrow --seed 98 --epochs 120 --every 2000 \
+  > logs/long-narrow.log 2>&1 &
+```
+
+120 epochs = 56,160 steps, ~4x the grid budget. Seed 98 keeps it out of the grid's 0–4 range
+and out of the probe's 99, so it can never be swept into the published table.
+
+What it decides: if `narrow` levels out above `full`'s ~1.1 plateau, the arrows set a quality
+ceiling at this scale. If it reaches ~1.1, they only cost convergence speed. Either answer is
+publishable; the current state — not knowing — is the one thing that cannot be written up as
+a finding.
