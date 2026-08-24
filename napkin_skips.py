@@ -640,10 +640,16 @@ def plot(out, arms):
                          [p["hi"] for p in d["per_nfe"]], color=c, alpha=.15)
     axl.set_xlabel("training step"); axl.set_ylabel("FMD (lower is better)")
     axl.set_yscale("log"); axl.legend(fontsize=7); axl.grid(alpha=.3)
-    axl.set_title("every arm run to convergence, all seeds")
+    # NOT "run to convergence" -- an earlier version of this title said that and it
+    # contradicted the repo's own headline finding. full and detach flatten; the three
+    # severed arms are still descending when the budget ends.
+    axl.set_title(f"training curves, {out['arms'][list(out['arms'])[0]]['n_seeds']} seeds/arm "
+                  "— severed arms still falling at the buzzer", fontsize=9)
     axr.set_xscale("log"); axr.set_yscale("log"); axr.grid(alpha=.3)
     axr.set_xlabel("network evaluations (NFE)"); axr.set_ylabel("FMD, IQM of seeds")
-    axr.set_title("final quality vs sampling budget"); axr.legend(fontsize=7)
+    axr.set_title(f"quality vs sampling budget, at {out['train_steps']:,} training steps",
+                  fontsize=9)
+    axr.legend(fontsize=7)
     fig.tight_layout(); fig.savefig(OUT / "skips.png")
     print("wrote", OUT / "skips.png")
 

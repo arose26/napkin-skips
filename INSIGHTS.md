@@ -238,3 +238,38 @@ gitignored and untracked.
 in the artifact that syncs between machines. When adding a resumability sentinel, add its
 gitignore entry in the same commit — and when a repo starts being used from two places, audit
 what `git add -A` has been sweeping up.
+
+## 8. The ablation that cannot be bought back with sampling compute
+
+The sweep was there to put every arm on a fair NFE axis, inherited from napkin-diffusion.
+It produced the result I did not predict, and it is the one I would keep if I could keep only
+one:
+
+| arm | NFE 9 | NFE 99 | ratio |
+|---|---|---|---|
+| `full` | 10.41 | 1.74 | **6.0×** |
+| `detach` | 18.40 | 2.99 | **6.2×** |
+| `lo-only` | 20.78 | 20.99 | 0.99× |
+| `narrow` | 24.45 | 21.84 | 1.12× |
+| `zeros` | 24.43 | 24.47 | 1.00× |
+
+Eleven times the sampling compute moves the intact arms by 6× and the severed arms by nothing
+at all. FMD collects sampler discretisation error and model error together, and NFE only
+reduces the first; for the severed arms the second dominates so completely that removing the
+first is invisible.
+
+The consequence for how the headline is quoted is the part worth internalising. The
+`full`-vs-`zeros` gap is **2.3× at 9 NFE and 14.1× at 99 NFE** — the same two models, the same
+checkpoints, a factor of six between the two honest ways to state the result. This repo already
+learned that the ratio moves with the *training* budget (entry 6). It moves with the *sampling*
+budget too, in the opposite direction, and for an unrelated reason.
+
+So "removing the skips costs 14× FMD" is a sentence with two hidden parameters in it. Neither
+is visible in the number, both change it severalfold, and a reader who quotes the headline
+without them is quoting something I did not measure.
+
+**Takeaway:** an ablation's effect size is a function of every budget the benchmark spends —
+training steps *and* inference compute. Before quoting a ratio, ask which budgets it is
+conditioned on, and publish the axis rather than the point whenever the axis is affordable.
+Here both axes were nearly free: the training curve falls out of the runs you already did, and
+the NFE sweep is the one napkin-diffusion had already built.

@@ -78,39 +78,70 @@ any of them failing is more interesting than all of them holding.
 
 ## Results
 
-The grid (5 arms × 5 seeds) is running. What is already measured is the **convergence probe**,
-and it changed the shape of the question.
+![five arms](assets/skips_final.png)
 
-| step | 3k | 6k | 9k | 12k | 14k | 17k | 21k |
-|---|---|---|---|---|---|---|---|
-| `full` | 4.14 | 1.77 | 2.07 | 1.39 | 1.50 | 1.26 | 1.10 |
-| `narrow` | 133 | 73.3 | 43.4 | 28.3 | 22.3 | 16.4 | 10.9 |
+`full | detach | lo-only | narrow | zeros`, same sampler, same seed, same noise. Two of these
+make digits.
 
-`full` saturates around 11k steps (the wobble after it is FMD sampling noise). `narrow` is
-still falling at 21k. Because one arm converged and the other did not, the penalty depends on
-where you stop:
+![curves and NFE](assets/skips.png)
+
+5 arms × 5 seeds × 14,040 training steps. FMD over 10,000 samples against the full MNIST test
+set, Heun on Karras spacing. **IQM with a 95% percentile bootstrap CI**, hand-rolled.
+
+| arm | NFE 9 | NFE 19 | NFE 49 | **NFE 99** | 9→99 |
+|---|---|---|---|---|---|
+| `full` | 10.41 | 5.17 | 1.89 | **1.74** <sub>[1.52, 2.31]</sub> | **6.0×** |
+| `detach` | 18.40 | 5.50 | 3.05 | **2.99** <sub>[2.05, 3.54]</sub> | **6.2×** |
+| `lo-only` | 20.78 | 23.08 | 20.97 | **20.99** <sub>[18.93, 24.64]</sub> | 0.99× |
+| `narrow` | 24.45 | 23.90 | 22.03 | **21.84** <sub>[19.07, 29.81]</sub> | 1.12× |
+| `zeros` | 24.43 | 27.01 | 25.14 | **24.47** <sub>[22.49, 26.07]</sub> | 1.00× |
+
+### The four registered predictions
+
+**1. `zeros` decisively worse than `full` — CONFIRMED, by far more than predicted.** 14×, with
+CIs nowhere near touching, against a registered "at least 2×". `zeros` has `full`'s exact
+parameter count, shapes and FLOPs, so this is not the 237,216 parameters `narrow` loses.
+
+**2. `lo-only` lands nearer `zeros` than `full` — CONFIRMED.** `lo-only` [18.93, 24.64]
+overlaps `zeros` [22.49, 26.07] and is nowhere near `full`. Turning the 8px arrow back on is
+the *only* difference between those two arms, and it buys nothing measurable. The load-bearing
+arrows are `h1` (32px) and `h2` (16px) — the ones that restore resolution.
+
+**3. `detach` ≈ `full` — upheld where it matters, unresolved where it doesn't.** `detach` 2.99
+[2.05, 3.54] against `full` 1.74 [1.52, 2.31]. The CIs overlap slightly, so I cannot claim
+`detach` is worse; but 4 of 5 `detach` seeds sit above 4 of 5 `full` seeds, so I cannot claim
+they are equal either. What *is* solid is the thing the prediction was about: removing the
+gradient shortcut while keeping the forward feature path leaves the model ~7× better than the
+best severed arm, firmly in `full`'s regime. The skips earn their keep by carrying features
+forward, not by shortening the gradient path.
+
+**4. `narrow` ≈ `zeros` — CONFIRMED.** `narrow` [19.07, 29.81] overlaps `zeros` [22.49, 26.07].
+Those 237,216 parameters and three residual projections buy nothing measurable — which is what
+retroactively justifies resting the headline on `zeros` instead of `narrow`.
+
+### An unregistered finding: the skips buy something NFE cannot
+
+Not predicted, found while reading the sweep, and flagged as post hoc.
+
+The three severed arms are **insensitive to sampling budget** — 0.99×, 1.00× and 1.12× going
+from 9 to 99 network evaluations, against 6.0× and 6.2× for the two intact arms. So the gap
+*grows* with sampling compute:
 
 ```
-30 epochs (14,040 steps):  1.50 vs 22.34  ->  14.9x
-45 epochs (21,060 steps):  1.10 vs 10.88  ->   9.9x
+at  9 NFE:  full 10.41  vs  zeros 24.43   ->  2.3x
+at 99 NFE:  full  1.74  vs  zeros 24.47   -> 14.1x
 ```
 
-So the honest primary artifact is the **FMD-vs-step curve**, not an endpoint table — every run
-in the grid records one. The endpoint table still ships, labelled as the budget-dependent
-slice it is.
+FMD collects both sampler discretisation error and model error, and NFE only reduces the
+first. For the severed arms the second dominates so completely that removing the first is
+invisible. Spending 11× the sampling compute on a skip-free model buys nothing; spending it on
+the intact model buys 6×.
 
-![full vs narrow at 45 epochs](assets/probe-full-vs-narrow.png)
+### Budget dependence, stated once more
 
-Both panes are the same sampler, the same seed and the same 21,060 training steps — `full`
-left, `narrow` right. This is what FMD 1.10 against 10.88 looks like: not "slightly softer
-digits", but digits against squiggles. Worth putting next to the numbers, because a 10x FMD
-ratio sounds like a matter of degree and is not one here. (`assets/probe-*.log` hold the raw
-curves.)
-
-**What is not established:** whether `narrow` ever reaches `full`'s quality. A curve that is
-still descending can asymptote anywhere, and "has not saturated" is not "will catch up". A
-long single-seed run is queued to bound it. Until that lands, this repo claims a convergence
-penalty and explicitly does not claim a quality ceiling.
+Every number above is at 14,040 steps, and the severed arms are **not converged there** — the
+45-epoch probe shows `narrow` still falling at 21,060 steps. These ratios are budget-dependent
+slices, not ceiling ratios. See the convergence probe below.
 
 ## What this does *not* show
 
