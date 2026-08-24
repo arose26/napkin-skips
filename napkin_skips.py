@@ -489,9 +489,18 @@ def load_model(arm, seed):
     return m.eval(), ck
 
 
+def _seeds(a):
+    """Which seeds this process is responsible for.
+
+    The grid is sharded across machines by SEED, never by arm: every arm then
+    appears on every machine, so a hardware difference is balanced across the
+    comparison instead of being confounded with it."""
+    return a.seedlist if a.seedlist else list(range(a.seeds))
+
+
 def cmd_grid(a):
     """Every arm x every seed, sequentially, resumable by checkpoint existence."""
-    for seed in range(a.seeds):
+    for seed in _seeds(a):
         for arm in a.arms:
             a.arm, a.seed = arm, seed
             cmd_train(a)
@@ -504,7 +513,7 @@ def cmd_sweep(a):
     clf = train_clf(a.dataset == "fashion")
     real = torch.cat([x for x, _ in loader(500, False, a.dataset == "fashion", shuffle=False)])
     fr = feats(clf, real)
-    for seed in range(a.seeds):
+    for seed in _seeds(a):
         for arm in a.arms:
             dest = RES / f"{arm}-{seed}.json"
             if dest.exists() and not a.force:
@@ -739,6 +748,8 @@ if __name__ == "__main__":
     p.add_argument("--arms", nargs="+", default=list(ARMS), choices=ARMS)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--seeds", type=int, default=5)
+    p.add_argument("--seedlist", type=int, nargs="+", default=None,
+                   help="explicit seeds for this shard; overrides --seeds")
     p.add_argument("--dataset", default="mnist", choices=["mnist", "fashion"])
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--bs", type=int, default=128)
