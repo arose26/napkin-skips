@@ -1,0 +1,32 @@
+/home/bob/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/cuda/__init__.py:58: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+arm=narrow seed=99 params 2.576M
+/home/bob/napkin-skips/napkin_skips.py:452: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler()
+/home/bob/napkin-skips/napkin_skips.py:353: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  clf.load_state_dict(torch.load(p)); return clf.eval()
+/home/bob/napkin-skips/napkin_skips.py:465: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast():
+  step      1 loss 1.1128 FMD 17697.392 (54s)
+  step   1000 loss 0.0473 FMD 11262.465 (248s)
+  step   2000 loss 0.0442 FMD  721.974 (542s)
+  step   3000 loss 0.0470 FMD  133.440 (738s)
+  step   4000 loss 0.0431 FMD   88.144 (969s)
+  step   5000 loss 0.0395 FMD   81.591 (1178s)
+  step   6000 loss 0.0390 FMD   73.266 (1376s)
+  step   7000 loss 0.0397 FMD   63.172 (1572s)
+  step   8000 loss 0.0383 FMD   53.018 (1766s)
+  step   9000 loss 0.0411 FMD   43.376 (1960s)
+  step  10000 loss 0.0384 FMD   37.172 (2157s)
+  step  11000 loss 0.0430 FMD   31.844 (2351s)
+  step  12000 loss 0.0432 FMD   28.335 (2543s)
+  step  13000 loss 0.0348 FMD   24.632 (2732s)
+  step  14000 loss 0.0363 FMD   22.337 (2923s)
+  step  15000 loss 0.0331 FMD   20.451 (3118s)
+  step  16000 loss 0.0346 FMD   18.439 (3311s)
+  step  17000 loss 0.0401 FMD   16.358 (3505s)
+  step  18000 loss 0.0313 FMD   14.637 (3697s)
+  step  19000 loss 0.0345 FMD   13.021 (3891s)
+  step  20000 loss 0.0319 FMD   11.925 (4086s)
+  step  21000 loss 0.0343 FMD   10.883 (4280s)
+saved /home/bob/napkin-skips/out/ckpt/narrow-99.pt

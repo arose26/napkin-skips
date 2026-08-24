@@ -8,3 +8,4 @@ arm=full seed=0 params 2.813M
 /home/bob/napkin-skips/napkin_skips.py:466: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with torch.cuda.amp.autocast():
   step      1 loss 1.1172 FMD 17735.694 (23s)
+  step   2000 loss 0.0333 FMD   15.427 (238s)

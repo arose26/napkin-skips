@@ -89,6 +89,14 @@ So the honest primary artifact is the **FMD-vs-step curve**, not an endpoint tab
 in the grid records one. The endpoint table still ships, labelled as the budget-dependent
 slice it is.
 
+![full vs narrow at 45 epochs](assets/probe-full-vs-narrow.png)
+
+Both panes are the same sampler, the same seed and the same 21,060 training steps — `full`
+left, `narrow` right. This is what FMD 1.10 against 10.88 looks like: not "slightly softer
+digits", but digits against squiggles. Worth putting next to the numbers, because a 10x FMD
+ratio sounds like a matter of degree and is not one here. (`assets/probe-*.log` hold the raw
+curves.)
+
 **What is not established:** whether `narrow` ever reaches `full`'s quality. A curve that is
 still descending can asymptote anywhere, and "has not saturated" is not "will catch up". A
 long single-seed run is queued to bound it. Until that lands, this repo claims a convergence
