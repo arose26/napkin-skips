@@ -151,3 +151,44 @@ it was not written on. **A second device is a test, not just a second worker.**
 Postscript on the thing that went right: `run_shard.sh` refused to train after the selfcheck
 failed, and printed the traceback into the driver log. That gate had been fixed an hour
 earlier (entry 3) for a hypothetical. It was not hypothetical.
+
+## 6. The ablation's headline number is a function of when you stop
+
+The 45-epoch onset probe was meant to answer a yes/no question — is 30 epochs enough? — and
+instead invalidated the shape of the claim I was going to make.
+
+| step | 3k | 6k | 9k | 12k | **14k** | 17k | **21k** |
+|---|---|---|---|---|---|---|---|
+| `full` | 4.14 | 1.77 | 2.07 | 1.39 | **1.50** | 1.26 | **1.10** |
+| `narrow` | 133 | 73.3 | 43.4 | 28.3 | **22.3** | 16.4 | **10.9** |
+
+`full`'s values from 11k onward wobble inside 1.10–1.68 with no trend — that is the sampling
+noise of a 2,000-sample FMD estimate, and the arm is saturated. `narrow` falls monotonically
+at roughly −8% per 1000 steps for the entire probe and is still falling at the end.
+
+One arm converged and the other did not, so the measured penalty depends on the budget:
+
+```
+at 14,040 steps (30 epochs):  1.50 vs 22.34  ->  14.9x
+at 21,060 steps (45 epochs):  1.10 vs 10.88  ->   9.9x
+```
+
+The ratio **shrinks as the budget grows**. So "removing the skips costs 15× FMD" is not a
+statement about quality at all — it is a statement about convergence speed wearing quality's
+clothes, and its value is set by where I chose to stop. napkin-gamemaster hit the same wall
+from the other side ("every surviving arm was rising at the buzzer") and the lesson generalises
+past RL: *a single-budget endpoint from arms with different convergence rates measures the
+rates, not the ceilings.*
+
+**And here is the inference I nearly published.** Having seen `narrow` still descending, I
+drafted the headline as "the arrows don't cap quality, they cost convergence speed". That does
+not follow. A monotonically falling curve can asymptote anywhere — `narrow` could level out at
+8 while `full` sits at 1.1, which would be a real ceiling and not slowness at all. "Has not
+saturated" and "will reach the same place" are different claims, and only the first one is
+measured. The repo now states the gap at each budget, states that the gap shrinks, and states
+that **whether `narrow` ever reaches `full`'s quality is unresolved by this grid** — with a
+long single-seed run queued to put a bound on it rather than a paragraph of extrapolation.
+
+**Takeaway:** when ablation arms converge at different rates, report the curve and treat the
+endpoint as a budget-dependent slice of it. And before writing "X is only slower, not worse",
+check whether you have observed X's asymptote or merely its descent.

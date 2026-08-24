@@ -68,12 +68,31 @@ any of them failing is more interesting than all of them holding.
 
 ## Results
 
-Not yet run. The grid is 5 arms × 5 seeds, and the budget is set from a measured
-convergence probe rather than inherited: the arms are run past the point where **every** arm
-has stopped improving, because an ablation that ends early reports a ranking of whichever
-arm merely started faster. That mistake is recorded in
-[napkin-gamemaster's INSIGHTS](https://github.com/arose26/napkin-gamemaster/blob/main/INSIGHTS.md)
-and is not going to be repeated here.
+The grid (5 arms × 5 seeds) is running. What is already measured is the **convergence probe**,
+and it changed the shape of the question.
+
+| step | 3k | 6k | 9k | 12k | 14k | 17k | 21k |
+|---|---|---|---|---|---|---|---|
+| `full` | 4.14 | 1.77 | 2.07 | 1.39 | 1.50 | 1.26 | 1.10 |
+| `narrow` | 133 | 73.3 | 43.4 | 28.3 | 22.3 | 16.4 | 10.9 |
+
+`full` saturates around 11k steps (the wobble after it is FMD sampling noise). `narrow` is
+still falling at 21k. Because one arm converged and the other did not, the penalty depends on
+where you stop:
+
+```
+30 epochs (14,040 steps):  1.50 vs 22.34  ->  14.9x
+45 epochs (21,060 steps):  1.10 vs 10.88  ->   9.9x
+```
+
+So the honest primary artifact is the **FMD-vs-step curve**, not an endpoint table — every run
+in the grid records one. The endpoint table still ships, labelled as the budget-dependent
+slice it is.
+
+**What is not established:** whether `narrow` ever reaches `full`'s quality. A curve that is
+still descending can asymptote anywhere, and "has not saturated" is not "will catch up". A
+long single-seed run is queued to bound it. Until that lands, this repo claims a convergence
+penalty and explicitly does not claim a quality ceiling.
 
 ## What this does *not* show
 
