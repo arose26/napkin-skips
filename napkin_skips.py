@@ -566,6 +566,17 @@ def cmd_report(a):
         + "; ".join(f"{k} steps: {sorted(v)}" for k, v in sorted(budgets.items())))
     out_steps = next(iter(budgets))
 
+    # Same argument one level down: `plot` indexes every run's curve positionally,
+    # so runs recorded at a different --every would either crash it or silently
+    # align step 4000 against step 6000. Matching totals is not matching sampling.
+    lens = {}
+    for arm, rs in rows.items():
+        for r in rs:
+            lens.setdefault(len(r["curve"]), []).append(f"{arm}-{r['seed']}")
+    assert len(lens) == 1, (
+        "runs have different numbers of curve points (different --every?): "
+        + "; ".join(f"{k} points: {sorted(v)}" for k, v in sorted(lens.items())))
+
     nfes = [r["nfe"] for r in rows[next(iter(rows))][0]["nfe"]]
     out = {"nfe_axis": nfes, "train_steps": out_steps, "arms": {}}
     for arm, rs in rows.items():
