@@ -563,6 +563,14 @@ def cmd_report(a):
         print(f"{arm:8s} n={len(rs)} params={rs[0]['params']/1e6:.3f}M  "
               f"FMD@{best['nfe']}={best['iqm']:7.3f} [{best['lo']:.3f},{best['hi']:.3f}]",
               flush=True)
+    # napkin-diffusion's insight #17: never compare at mismatched n. A grid that
+    # lost one run to a dead session will otherwise print a tidy table in which one
+    # arm's CI is quietly wider than its neighbours' for a reason no reader can see.
+    ns = {arm: d["n_seeds"] for arm, d in out["arms"].items()}
+    if len(set(ns.values())) > 1:
+        print(f"!! UNEQUAL SEED COUNTS {ns} -- these arms are NOT comparable as a table; "
+              f"finish the missing runs or drop to the common n before publishing")
+        out["unequal_n"] = ns
     (OUT / "report.json").write_text(json.dumps(out, indent=2))
     print("wrote", OUT / "report.json")
     plot(out, a.arms)
@@ -681,14 +689,33 @@ def cmd_selfcheck(a):
     # 2. `detach` must be the SAME FUNCTION as `full` -- identical forward, different
     #    graph. This is the assert that proves the arm isolates the gradient path and
     #    nothing else; if it ever fails, `detach` is secretly an information ablation.
+    #
+    #    Checked on CPU, deliberately. The first version compared the two models on
+    #    the GPU and asserted bitwise equality -- which passed on an RTX 4050 and
+    #    FAILED on a T4, because two *identical* forward calls are not bitwise equal
+    #    there. That assert was testing the platform's kernel determinism, not the
+    #    claim, and would have blocked the second lane for a property this repo does
+    #    not need. "detach changes the graph, not the value" is an architecture claim,
+    #    so it is tested where the arithmetic is reproducible, and the GPU's own
+    #    repeat-call noise floor is measured and reported next to it instead.
     torch.manual_seed(1)
-    mf = UNet(arm="full").to(DEV)
-    md = UNet(arm="detach").to(DEV)
+    mf = UNet(arm="full")
+    md = UNet(arm="detach")
     md.load_state_dict(mf.state_dict())
+    xc = torch.randn(8, 1, 32, 32)
+    tc = torch.randint(0, T, (8,))
+    with torch.no_grad():
+        assert torch.equal(mf(xc, tc), md(xc, tc)), "detach must not change the forward pass (CPU)"
+
     xb = torch.randn(8, 1, 32, 32, device=DEV)
     tb = torch.randint(0, T, (8,), device=DEV)
+    mfd, mdd = mf.to(DEV), md.to(DEV)
     with torch.no_grad():
-        assert torch.equal(mf(xb, tb), md(xb, tb)), "detach must not change the forward pass"
+        r1, r2, rd = mfd(xb, tb), mfd(xb, tb), mdd(xb, tb)
+    noise = (r1 - r2).abs().max().item()          # same model, twice: platform floor
+    delta = (r1 - rd).abs().max().item()          # full vs detach
+    assert delta <= max(noise, 1e-7), \
+        f"detach differs by {delta:.3e}, more than this device's own repeat-call noise {noise:.3e}"
 
     # 3. A zeroed arrow must receive EXACT-zero gradient on the weight block that
     #    reads it, and a live arrow must not. This is the severance proof, and it is

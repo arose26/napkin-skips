@@ -57,8 +57,13 @@ assert gl[3] > 0.0 and gl[2] == 0.0 and gl[1] == 0.0   # exactly one arrow live
 The `detach` arm gets the complementary assert, and it is the one I'd have skipped: with the
 same weights, `detach`'s forward pass must be **bit-identical** to `full`'s, because detaching
 changes the graph and not the value. If that assert ever fails, `detach` has quietly become an
-information ablation and no longer isolates the gradient path. `torch.equal`, not `allclose` —
-there is no tolerance to argue about.
+information ablation and no longer isolates the gradient path.
+
+I first wrote that assert on the GPU with `torch.equal` and a note to myself that there was
+"no tolerance to argue about". That was wrong for a reason worth reading entry 5 for: on some
+devices two identical forward calls are not bitwise equal either, so the assert was testing
+the platform rather than the arm. It now runs on CPU, where `torch.equal` means what I thought
+it meant everywhere.
 
 **Takeaway:** for every ablation arm, write the assert that would fail if the arm were secretly
 still connected (or secretly disconnecting more than intended). "I removed the line, so it must
@@ -107,3 +112,42 @@ shim hid it behind a source tree that refuses to import. Deleting the symlink fi
 **Takeaway:** a dependency shim is only correct for the interpreter it was built for, and
 `PYTHONPATH` is a shadow, not a fallback. Check whether the environment already satisfies the
 constraint before importing a sibling's workaround for a problem you may not have.
+
+## 5. The second lane found a bug in my assert within six minutes of existing
+
+Adding a Colab T4 as a second compute lane was supposed to be a wall-clock optimisation. Its
+first act was to fail the selfcheck that had passed on the laptop every time:
+
+```
+assert torch.equal(mf(xb, tb), md(xb, tb)), "detach must not change the forward pass"
+AssertionError: detach must not change the forward pass
+```
+
+`detach()` cannot change a forward value — it changes the autograd graph. And the arm was
+fine. The assert was wrong, in a way a single machine could never have shown me: it compared
+**two separate GPU forward calls** and demanded they be bitwise equal. On the RTX 4050 they
+were. On the T4 they are not, so the assert was silently testing kernel determinism and
+calling it an architecture claim.
+
+The fix separates the two questions. "Detach changes the graph, not the value" is an
+architecture claim, so it is asserted on **CPU**, where the arithmetic is reproducible and
+`torch.equal` means what it says. The GPU then gets a *relative* check against its own noise
+floor — the same model run twice — so `full` vs `detach` only has to be no further apart than
+`full` is from itself:
+
+```python
+noise = (r1 - r2).abs().max().item()   # same model, twice
+delta = (r1 - rd).abs().max().item()   # full vs detach
+assert delta <= max(noise, 1e-7)
+```
+
+Two things worth keeping. napkin-gamemaster spent an afternoon discovering that
+nondeterministic CUDA kernels perturb weights at ~1e-7 and blamed its async collector for it;
+the same phenomenon reappeared here as a *false assert failure* rather than a false result,
+which is the cheap way to meet it. And the honest framing of the run: this bug was latent in
+the repo, would have shipped, and the only reason it surfaced is that the code ran on hardware
+it was not written on. **A second device is a test, not just a second worker.**
+
+Postscript on the thing that went right: `run_shard.sh` refused to train after the selfcheck
+failed, and printed the traceback into the driver log. That gate had been fixed an hour
+earlier (entry 3) for a hypothetical. It was not hypothetical.
