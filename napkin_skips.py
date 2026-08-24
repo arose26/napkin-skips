@@ -552,8 +552,22 @@ def cmd_report(a):
     missing = [arm for arm in a.arms if arm not in rows]
     if missing:
         print(f"!! no results for {missing} -- reporting the rest", flush=True)
+    # Every run in the table must share one training budget. The probe (seed 99)
+    # and the long narrow run (seed 98) train to different step counts on purpose,
+    # so a stray checkpoint swept into out/res would pool 14,040-step runs with
+    # 21,060-step ones and quietly compare arms at different budgets -- the exact
+    # error this repo's headline finding is about. Fail loudly rather than average.
+    budgets = {}
+    for arm, rs in rows.items():
+        for r in rs:
+            budgets.setdefault(r["steps"], []).append(f"{arm}-{r['seed']}")
+    assert len(budgets) == 1, (
+        "runs span multiple training budgets, refusing to build a table: "
+        + "; ".join(f"{k} steps: {sorted(v)}" for k, v in sorted(budgets.items())))
+    out_steps = next(iter(budgets))
+
     nfes = [r["nfe"] for r in rows[next(iter(rows))][0]["nfe"]]
-    out = {"nfe_axis": nfes, "arms": {}}
+    out = {"nfe_axis": nfes, "train_steps": out_steps, "arms": {}}
     for arm, rs in rows.items():
         finals = [r["curve"][-1]["fmd"] for r in rs]
         per_nfe = []
