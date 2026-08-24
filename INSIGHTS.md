@@ -90,9 +90,18 @@ Fixed by testing the contents:
 if [ "$(cat .done.selfcheck 2>/dev/null)" != "0" ]; then ... fi
 ```
 
+A third variant of the same bug turned up later, and it is the one I would least have
+predicted: `.done.sweep` has **no shard in its name**. Two shards of the same grid — seeds
+0–2 and seeds 3–4 — share that one filename, so the second shard would have read the first
+shard's sentinel and skipped its own sweep entirely, publishing five arms at three seeds while
+believing it had five. The per-run sentinels are keyed `.done.train.<arm>-<seed>` and are
+fine; the aggregate step was the one that forgot it could be run more than once.
+
 **Takeaway:** the moment a sentinel carries information richer than "done", every gate that
 reads it has to be re-checked. An existence test against a status-bearing file treats failure
-as success, which is the one direction a resumable pipeline must never round.
+as success, which is the one direction a resumable pipeline must never round. And a sentinel's
+*name* is part of its correctness: if a phase can run twice with different inputs, its
+filename must contain those inputs, or the second run inherits the first one's completion.
 
 ## 4. Borrowing a sibling repo's `.deps` broke the import outright
 
