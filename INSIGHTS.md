@@ -192,3 +192,32 @@ long single-seed run queued to put a bound on it rather than a paragraph of extr
 **Takeaway:** when ablation arms converge at different rates, report the curve and treat the
 endpoint as a budget-dependent slice of it. And before writing "X is only slower, not worse",
 check whether you have observed X's asymptote or merely its descent.
+
+## 7. Committing the sentinels made one lane skip the work the other had done
+
+`run_shard.sh` gates every phase on `.done.<phase>` holding `0`. Entry 3 fixed the gate. What
+neither the gate nor the fix noticed is that **`.done.*` was tracked by git**, because
+`.gitignore` listed `out/` and `.deps` and nothing else.
+
+So the sentinels rode the repo between machines. The local lane finished its selfcheck and
+wrote `.done.selfcheck=0`; a routine `git add -A` committed it; the Colab lane pulled and
+`run_shard.sh` correctly concluded the selfcheck had passed — **on a different machine, with a
+different GPU, a different torch and a different numpy.** Its driver log goes straight to
+`train full seed 3` with no selfcheck line at all.
+
+That is the exact failure the second lane had already caught once (entry 5): the selfcheck is
+the thing that discovered a T4/4050 disagreement, and this bug silently switched it off for
+the T4. The two entries together make the point sharper than either does alone — a
+cross-platform check is worthless if the "already checked" flag is itself cross-platform.
+
+The blast radius was larger than the selfcheck. `.done.train.<arm>-<seed>` is the same kind of
+file: had the shards overlapped on any seed, one lane would have skipped a run it never
+performed and the grid would have quietly published an arm with a missing seed.
+
+Fixed by making the sentinels local-only — `.done.*`, `driver.log` and `logs/` are now
+gitignored and untracked.
+
+**Takeaway:** completion state describes *a machine*, not *a codebase*, so it must never live
+in the artifact that syncs between machines. When adding a resumability sentinel, add its
+gitignore entry in the same commit — and when a repo starts being used from two places, audit
+what `git add -A` has been sweeping up.

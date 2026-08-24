@@ -1,5 +1,0 @@
-/home/bob/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/cuda/__init__.py:58: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
-  import pynvml  # type: ignore[import]
-overfit losses: {'full': 0.0024, 'zeros': 0.0007, 'lo-only': 0.0026, 'detach': 0.0053, 'narrow': 0.0084}
-params: full=2.813M  zeros=2.813M  lo-only=2.813M  detach=2.813M  narrow=2.576M
-selfcheck OK  (eta=1 err 9.42e-06, euler err 2.72e-04)

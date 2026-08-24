@@ -1,3 +1,7 @@
 out/
 __pycache__/
 .deps
+.done.*
+driver.log
+logs/
+logs_selfcheck_head.log
