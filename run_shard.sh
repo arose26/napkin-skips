@@ -11,17 +11,22 @@ EPOCHS=${EPOCHS:-30}
 ARMS=${ARMS:-"full zeros lo-only detach narrow"}
 mkdir -p out logs
 
-if [ ! -f .done.selfcheck ]; then
+# The sentinel carries the exit STATUS, so the gate tests its contents, not its
+# existence. Testing existence would mean a failed selfcheck is skipped on the
+# next launch and the shard trains on code that never passed.
+if [ "$(cat .done.selfcheck 2>/dev/null)" != "0" ]; then
   echo "[$(date -u +%H:%M:%S)] selfcheck"
   python3 napkin_skips.py selfcheck > logs/selfcheck.log 2>&1
   rc=$?; echo $rc > .done.selfcheck
-  [ "$rc" -ne 0 ] && { echo "SELFCHECK FAILED rc=$rc -- refusing to train"; exit 1; }
+  if [ "$rc" -ne 0 ]; then
+    echo "SELFCHECK FAILED rc=$rc -- refusing to train"; tail -20 logs/selfcheck.log; exit 1
+  fi
 fi
 
 for s in $SEEDS; do
   for a in $ARMS; do
     f=".done.train.$a-$s"
-    [ -f "$f" ] && continue
+    [ "$(cat "$f" 2>/dev/null)" = "0" ] && continue
     echo "[$(date -u +%H:%M:%S)] train $a seed $s"
     python3 napkin_skips.py train --arm "$a" --seed "$s" --epochs "$EPOCHS" \
       > "logs/train-$a-$s.log" 2>&1
@@ -29,7 +34,7 @@ for s in $SEEDS; do
   done
 done
 
-if [ ! -f .done.sweep ]; then
+if [ "$(cat .done.sweep 2>/dev/null)" != "0" ]; then
   echo "[$(date -u +%H:%M:%S)] sweep"
   python3 napkin_skips.py sweep --seedlist $SEEDS > logs/sweep.log 2>&1
   echo $? > .done.sweep
