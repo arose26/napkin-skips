@@ -266,13 +266,15 @@ the severed arms the second dominates so completely that removing the first is i
 The long `narrow` run — **same architecture, no arrows, trained 4× longer** — swept on the
 same axis:
 
-| `narrow` | NFE 9 | NFE 19 | NFE 49 | ratio |
-|---|---|---|---|---|
-| @14,040 steps | 24.45 | 23.90 | 22.03 | 1.11× |
-| @56,160 steps | **8.68** | **2.64** | **1.15** | **7.6×** |
+| `narrow` | NFE 9 | NFE 19 | NFE 49 | NFE 99 | 9→99 |
+|---|---|---|---|---|---|
+| @14,040 steps | 24.45 | 23.90 | 22.03 | 21.84 | 1.12× |
+| @56,160 steps | **8.68** | **2.64** | **1.15** | **1.24** | **6.98×** |
 
 The converged skip-free model responds to sampling budget *more* steeply than `full` does at
-the grid budget. Nothing about its topology changed.
+the grid budget (5.98×). Nothing about its topology changed. It also lands at 1.24 against
+`full`'s grid IQM of 1.74 — the same checkpoint that supposedly could not use sampling compute
+now beats the intact arm's own 99-NFE number.
 
 ### What was wrong
 

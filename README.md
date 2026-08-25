@@ -132,8 +132,15 @@ at 99 NFE:  full  1.74  vs  zeros 24.47   -> 14.1x
 
 I first wrote this up as "the skips buy quality that sampling compute cannot", which is
 **wrong**, and the long `narrow` run refutes it. Trained 4× longer, the *same* skip-free
-architecture responds to NFE steeply — 8.68 → 1.15 from 9 to 49 NFE, a 7.6× gain against
-1.11× for the identical architecture undertrained.
+architecture responds to NFE steeply:
+
+| `narrow` | NFE 9 | NFE 19 | NFE 49 | NFE 99 | 9→99 |
+|---|---|---|---|---|---|
+| @14,040 steps | 24.45 | 23.90 | 22.03 | 21.84 | 1.12× |
+| @56,160 steps | **8.68** | **2.64** | **1.15** | **1.24** | **6.98×** |
+
+That is a steeper response than `full` manages at the grid budget (5.98×), from a checkpoint
+with no encoder–decoder arrows at all — and at 1.24 it beats `full`'s own 99-NFE IQM of 1.74.
 
 The mechanism was right, the attribution was not. FMD collects sampler discretisation error
 and model error, and NFE reduces only the first; when a model's own error dominates, the
