@@ -119,29 +119,77 @@ forward, not by shortening the gradient path.
 Those 237,216 parameters and three residual projections buy nothing measurable — which is what
 retroactively justifies resting the headline on `zeros` instead of `narrow`.
 
-### An unregistered finding: the skips buy something NFE cannot
+### An unregistered finding, and the correction it needed
 
-Not predicted, found while reading the sweep, and flagged as post hoc.
-
-The three severed arms are **insensitive to sampling budget** — 0.99×, 1.00× and 1.12× going
-from 9 to 99 network evaluations, against 6.0× and 6.2× for the two intact arms. So the gap
-*grows* with sampling compute:
+At this budget the three severed arms are **insensitive to sampling budget** — 0.99×, 1.00×
+and 1.12× going from 9 to 99 network evaluations, against 6.0× and 6.2× for the intact arms.
+So the gap *grows* with sampling compute:
 
 ```
 at  9 NFE:  full 10.41  vs  zeros 24.43   ->  2.3x
 at 99 NFE:  full  1.74  vs  zeros 24.47   -> 14.1x
 ```
 
-FMD collects both sampler discretisation error and model error, and NFE only reduces the
-first. For the severed arms the second dominates so completely that removing the first is
-invisible. Spending 11× the sampling compute on a skip-free model buys nothing; spending it on
-the intact model buys 6×.
+I first wrote this up as "the skips buy quality that sampling compute cannot", which is
+**wrong**, and the long `narrow` run refutes it. Trained 4× longer, the *same* skip-free
+architecture responds to NFE steeply — 8.68 → 1.15 from 9 to 49 NFE, a 7.6× gain against
+1.11× for the identical architecture undertrained.
+
+The mechanism was right, the attribution was not. FMD collects sampler discretisation error
+and model error, and NFE reduces only the first; when a model's own error dominates, the
+second is invisible. That is a statement about **training state**, not topology. Removing the
+skips does not confer NFE-insensitivity — it puts the model further from convergence at any
+given step count, and that does.
+
+What survives is the trap for anyone comparing ablations at a shared budget: the headline
+ratio has *two* hidden parameters, training steps and inference compute, and they move it
+severalfold in opposite directions. See INSIGHTS #8.
 
 ### Budget dependence, stated once more
 
 Every number above is at 14,040 steps, and the severed arms are **not converged there** — the
 45-epoch probe shows `narrow` still falling at 21,060 steps. These ratios are budget-dependent
 slices, not ceiling ratios. See the convergence probe below.
+
+## The convergence probe, and the question it left open
+
+The grid's budget was not inherited. Before it ran, one `full` and one `narrow` were trained to
+45 epochs (21,060 steps) with FMD sampled every 1,000, to check that 30 epochs cleared every
+arm's onset:
+
+| step | 3k | 6k | 9k | 12k | 14k | 17k | 21k |
+|---|---|---|---|---|---|---|---|
+| `full` | 4.14 | 1.77 | 2.07 | 1.39 | 1.50 | 1.26 | 1.10 |
+| `narrow` | 133 | 73.3 | 43.4 | 28.3 | 22.3 | 16.4 | 10.9 |
+
+`full` saturates around 11k steps; `narrow` was still falling at 21k. One arm converged and the
+other did not, which is why the ratio moves with the budget — 14.9× at 30 epochs, 9.9× at 45 —
+and why this repo reports curves rather than a single number.
+
+![full vs narrow at 45 epochs](assets/probe-full-vs-narrow.png)
+
+That left one question open, and I declined to guess it: a still-descending curve can asymptote
+anywhere, so "`narrow` has not saturated" was never "`narrow` will catch up".
+
+### Resolved: a speed penalty, not a ceiling
+
+One 120-epoch run — 56,160 steps, 4× the grid budget, seed 98, same machine as every grid run,
+same probe — settles it:
+
+```
+narrow @56k:  8k:55.1  16k:17.4  24k:7.7  32k:4.3  40k:3.0  48k:2.4  56k:1.68
+full   @14k, five seeds:  1.88  2.05  2.29  2.31  3.17
+```
+
+`narrow` reaches **1.68**, below every `full` seed at the grid budget, and is still falling.
+**Removing the encoder–decoder arrows does not cap what this architecture can reach at this
+scale — it costs roughly 4× the training steps to get there.**
+
+Three caveats keep that honest. It is n=1 against `full`'s n=5, so it shows `narrow` *can*
+reach that range, not how reliably. 1.68 is not `narrow`'s asymptote either — it was still
+descending at the buzzer. And `full` at its own longer budget goes lower still (1.10 by 21k),
+so a converged-vs-converged comparison is **not** in hand; what is established is that no
+ceiling is visible where the grid implied one.
 
 ## What this does *not* show
 
