@@ -178,25 +178,41 @@ and why this repo reports curves rather than a single number.
 That left one question open, and I declined to guess it: a still-descending curve can asymptote
 anywhere, so "`narrow` has not saturated" was never "`narrow` will catch up".
 
-### Resolved: a speed penalty, not a ceiling
+### Resolved: the gap is overwhelmingly convergence speed
 
-One 120-epoch run — 56,160 steps, 4× the grid budget, seed 98, same machine as every grid run,
-same probe — settles it:
+This was the repo's open question, and I refused to guess it: a still-descending curve can
+asymptote anywhere, so "`narrow` has not saturated" was never "`narrow` will catch up". Both
+arms were run at **56,160 steps** — 4× the grid budget, same machine, same seed 98 — and swept
+on the grid's own metric (10,000 samples).
+
+| arm @56,160 steps | NFE 9 | NFE 19 | NFE 49 | NFE 99 | 9→99 |
+|---|---|---|---|---|---|
+| `full` | 11.88 | 3.33 | **0.90** | **0.77** | 15.5× |
+| `narrow` | **8.68** | **2.64** | 1.15 | 1.24 | 7.0× |
 
 ```
-narrow @56k:  8k:55.1  16k:17.4  24k:7.7  32k:4.3  40k:3.0  48k:2.4  56k:1.68
-full   @14k, five seeds:  1.88  2.05  2.29  2.31  3.17
+at the 14,040-step grid budget, 99 NFE:  full 1.74  vs  narrow 21.84   ->  12.6x
+at 56,160 steps,                99 NFE:  full 0.77  vs  narrow  1.24   ->   1.63x
 ```
 
-`narrow` reaches **1.68**, below every `full` seed at the grid budget, and is still falling.
-**Removing the encoder–decoder arrows does not cap what this architecture can reach at this
-scale — it costs roughly 4× the training steps to get there.**
+**The 12.6× headline collapses to 1.63× once both arms are trained to convergence.** That is
+the finding: the cost of removing the encoder–decoder arrows at this scale is overwhelmingly a
+*convergence-speed* penalty, not an attainable-quality one.
 
-Three caveats keep that honest. It is n=1 against `full`'s n=5, so it shows `narrow` *can*
-reach that range, not how reliably. 1.68 is not `narrow`'s asymptote either — it was still
-descending at the buzzer. And `full` at its own longer budget goes lower still (1.10 by 21k),
-so a converged-vs-converged comparison is **not** in hand; what is established is that no
-ceiling is visible where the grid implied one.
+**What I deliberately do not claim.** It is tempting to read the surviving 1.63× as "a real
+residual quality gap". At n=1 per arm that does not follow. In the five-seed grid, `full`'s own
+seeds spanned 1.49–2.48 at 99 NFE (a 1.66× ratio) and `narrow`'s spanned 18.58–33.24 (1.79×) —
+**both arms individually vary by more than the cross-arm gap being measured.** So whether any
+residual difference exists is *unresolved*, and settling it needs ~5 seeds per arm at the long
+budget, not one.
+
+Two further caveats point the same way. `full` is flat in 0.96–1.27 from about 24k steps, while
+`narrow` was **still descending** at 56k (1.87 → 1.68 over its last two probes) — so `narrow`'s
+number is an upper bound and more training would shrink the remaining gap, not grow it. And a
+low-NFE crossover appears: at 9 and 19 NFE `narrow` is *better* (0.73× and 0.79×). Converged
+`full` is also worse at 9 NFE than the 14k-step `full` was (11.88 vs 10.41), which is familiar
+diffusion behaviour — a sharper, better-converged model carries larger discretisation error at
+very few steps. Plausible rather than anomalous, and logged as an observation to test at n>1.
 
 ## What this does *not* show
 

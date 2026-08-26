@@ -302,3 +302,39 @@ it severalfold in opposite directions. What does not survive is the architectura
 undertrained is the cheapest way to get there. Before attributing a behaviour to an
 architecture, train the *same* architecture to convergence and check whether the behaviour
 survives. A one-budget sweep cannot tell you which of its axes you are actually measuring.
+
+## 9. The headline shrank by 8× when both arms got the same budget
+
+The grid says removing the skips costs **12.6×** at 99 NFE. Running both arms at 4× the grid
+budget — 56,160 steps, same machine, same seed — says it costs **1.63×**.
+
+| arm @56,160 | NFE 9 | NFE 19 | NFE 49 | NFE 99 |
+|---|---|---|---|---|
+| `full` | 11.88 | 3.33 | **0.90** | **0.77** |
+| `narrow` | **8.68** | **2.64** | 1.15 | 1.24 |
+
+Entry 6 established that the ratio moves with the training budget, from 14.9× to 9.9× between
+30 and 45 epochs. It kept moving. At 120 epochs almost the entire effect is gone: what the
+five-seed grid measures, and what a reader would quote from it, is *mostly the handicapped arm
+not having finished learning yet*.
+
+**And then the discipline had to survive its own good news.** The surviving 1.63× is exactly
+the number I wanted to report as "a real residual quality gap", because it would have made the
+story tidy: skips cost speed *and* a little quality. It does not survive contact with the seed
+spreads already sitting in `assets/res/`. At 99 NFE `full`'s five seeds span 1.49–2.48 (1.66×)
+and `narrow`'s span 18.58–33.24 (1.79×). **Both arms individually vary by more than the
+cross-arm gap being measured.** With n=1 per arm at the long budget, 1.63× is not a finding; it
+is a draw from a distribution I have already characterised as wider than that.
+
+The asymmetry in what the two runs license is worth stating plainly. The *collapse* — 12.6× to
+1.63× — is an order of magnitude and survives seed noise comfortably. The *residual* is inside
+seed noise and does not. One long run per arm is enough to overturn a big claim and nowhere
+near enough to establish a small one, and those two conclusions come from the same two runs.
+
+A third detail cuts the same way: `narrow` was **still descending** at 56k while `full` had been
+flat since ~24k, so the remaining gap is an upper bound that more training would shrink.
+
+**Takeaway:** when a budget correction shrinks your effect, check whether what is left is
+bigger than the variance you already measured. The temptation at that moment is to bank the
+remainder as a smaller-but-real finding, and that is precisely when the noise floor from the
+original grid — which you already have, for free — is the thing to look up.
