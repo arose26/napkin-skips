@@ -102,6 +102,11 @@ set, Heun on Karras spacing. **IQM with a 95% percentile bootstrap CI**, hand-ro
 CIs nowhere near touching, against a registered "at least 2×". `zeros` has `full`'s exact
 parameter count, shapes and FLOPs, so this is not the 237,216 parameters `narrow` loses.
 
+> **Do not quote that 14× on its own.** It is measured at one training budget, and the
+> converged comparison further down shows it collapsing to ~1.6× once both arms are trained to
+> convergence. The *direction* holds at every budget measured; the *magnitude* is mostly a
+> statement about convergence speed.
+
 **2. `lo-only` lands nearer `zeros` than `full` — CONFIRMED.** `lo-only` [18.93, 24.64]
 overlaps `zeros` [22.49, 26.07] and is nowhere near `full`. Turning the 8px arrow back on is
 the *only* difference between those two arms, and it buys nothing measurable. The load-bearing
@@ -114,6 +119,10 @@ they are equal either. What *is* solid is the thing the prediction was about: re
 gradient shortcut while keeping the forward feature path leaves the model ~7× better than the
 best severed arm, firmly in `full`'s regime. The skips earn their keep by carrying features
 forward, not by shortening the gradient path.
+
+This is the one registered prediction left open, and it is *staying* open: separating `detach`
+from `full` needs roughly ten more runs, and the answer would refine a mechanism rather than
+change any conclusion here.
 
 **4. `narrow` ≈ `zeros` — CONFIRMED.** `narrow` [19.07, 29.81] overlaps `zeros` [22.49, 26.07].
 Those 237,216 parameters and three residual projections buy nothing measurable — which is what
@@ -213,6 +222,26 @@ low-NFE crossover appears: at 9 and 19 NFE `narrow` is *better* (0.73× and 0.79
 `full` is also worse at 9 NFE than the 14k-step `full` was (11.88 vs 10.41), which is familiar
 diffusion behaviour — a sharper, better-converged model carries larger discretisation error at
 very few steps. Plausible rather than anomalous, and logged as an observation to test at n>1.
+
+## Where this landed
+
+Four registered predictions resolved, one published claim retracted, and the open
+ceiling-vs-speed question measured rather than argued.
+
+| | |
+|---|---|
+| **Skips are load-bearing** | `zeros` 14× worse than `full` at the grid budget — parameter-matched, CIs far apart |
+| **…but mostly as convergence speed** | that gap is **1.63×** once both arms train to 56,160 steps |
+| **The resolution-restoring arrows do the work** | `lo-only` is indistinguishable from `zeros`; the 8px arrow buys nothing measurable |
+| **Capacity is not the story** | `narrow` is indistinguishable from `zeros` despite differing by 237,216 parameters |
+| **Features forward, not gradients back** | `detach` stays in `full`'s regime, ~7× better than any severed arm |
+
+Deliberately **not** claimed: a residual quality gap at convergence (it sits inside both arms'
+seed spreads at n=1), the low-NFE crossover (n=1), anything about UNet-vs-DiT, and anything
+about scale beyond this one 2.8M-parameter 32×32 configuration.
+
+The through-line, if there is one: every number in this repo moved when a budget moved, and
+the work was mostly in finding out which budget each claim was secretly conditioned on.
 
 ## What this does *not* show
 
