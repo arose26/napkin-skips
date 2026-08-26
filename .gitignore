@@ -3,5 +3,7 @@ __pycache__/
 .deps
 .done.*
 driver.log
+queue.log
 logs/
 logs_selfcheck_head.log
+shard-out.tgz

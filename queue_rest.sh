@@ -10,6 +10,7 @@
 set -u
 cd "$(dirname "$0")"
 ARMS="full zeros lo-only detach narrow"
+mkdir -p out logs   # this script redirects into logs/; do not assume it exists
 
 # The 0-2 shard signals completion by writing .done.sweep=0 as its last gated step.
 until [ "$(cat .done.sweep 2>/dev/null)" = "0" ]; do sleep 60; done
